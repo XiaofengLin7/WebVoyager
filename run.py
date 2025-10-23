@@ -11,6 +11,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
 
 from prompts import SYSTEM_PROMPT, SYSTEM_PROMPT_TEXT_ONLY
 from openai import OpenAI
@@ -52,6 +53,10 @@ def driver_config(args):
             "plugins.always_open_pdf_externally": True
         }
     )
+    options.add_argument(f"--window-size={args.window_width},{args.window_height}")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     return options
 
 
@@ -119,7 +124,7 @@ def call_gpt4v_api(args, openai_client, messages):
     while True:
         try:
             if not args.text_only:
-                logging.info('Calling gpt4v API...')
+                logging.info('Calling gpt4o API...')
                 openai_response = openai_client.chat.completions.create(
                     model=args.api_model, messages=messages, max_tokens=1000, seed=args.seed
                 )
@@ -236,7 +241,7 @@ def main():
     parser.add_argument('--test_file', type=str, default='data/test.json')
     parser.add_argument('--max_iter', type=int, default=5)
     parser.add_argument("--api_key", default="key", type=str, help="YOUR_OPENAI_API_KEY")
-    parser.add_argument("--api_model", default="gpt-4-vision-preview", type=str, help="api model name")
+    parser.add_argument("--api_model", default="gpt-4o", type=str, help="api model name")
     parser.add_argument("--output_dir", type=str, default='results')
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--max_attached_imgs", type=int, default=1)
@@ -279,10 +284,17 @@ def main():
 
         driver_task = webdriver.Chrome(options=options)
 
-        # About window size, 765 tokens
-        # You can resize to height = 512 by yourself (255 tokens, Maybe bad performance)
-        driver_task.set_window_size(args.window_width, args.window_height)  # larger height may contain more web information
+        driver_task.set_page_load_timeout(30)
+        
+        # try:
+        #     WebDriverWait(driver_task, 15).until(
+        #         lambda d: d.execute_script("return document.readyState") in ("interactive", "complete")
+        #     )
+        # except Exception as e:
+        #     logging.error(f"[WARN] readyState wait failed: {e}")
+
         driver_task.get(task['web'])
+
         try:
             driver_task.find_element(By.TAG_NAME, 'body').click()
         except:
