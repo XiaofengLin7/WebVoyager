@@ -1,5 +1,201 @@
 from typing import Any, TypedDict
 import re
+import logging
+import time
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+
+REDDIT = "http://WEBARENA_HOST:9999"
+MAP = "http://WEBARENA_HOST:3000"#443"
+GITLAB = "http://WEBARENA_HOST:8023"
+SHOPPING_ADMIN = "http://WEBARENA_HOST:7780/admin"
+SHOPPING = "http://WEBARENA_HOST:7770"
+
+WEBARENA_DOMAINS = ['reddit', 'gitlab', 'shopping_admin', 'shopping', 'map']
+
+def webarena_login(web_name, url, driver_task, webarena_host, batch_id, num_containers_per_machine):
+    batch_id = batch_id % num_containers_per_machine
+    match web_name:
+        case 'reddit':
+            username = "MarvelsGrantMan136"
+            password = "test1234"
+            for _ in range(3):
+                try:
+                    port_num = str(9999 + batch_id)
+                    reddit = REDDIT.replace("WEBARENA_HOST", webarena_host.reddit).replace("9999", port_num)
+                    url_mapping = [(reddit, "http://postmill.xyz"), ("reddit", "postmill"), ("Reddit", "Postmill")]
+                    url = url.replace(":9999", ":" + port_num)
+                    driver_task.get(f"{reddit}/login")
+                    WebDriverWait(driver_task, 10).until(EC.presence_of_element_located((By.XPATH, "//label[text()='Username']/following-sibling::input")))
+                    username_field = driver_task.find_element(By.XPATH, "//label[text()='Username']/following-sibling::input")
+                    username_field.send_keys(username)
+                    password_field = driver_task.find_element(By.XPATH, "//label[text()='Password']/following-sibling::input")
+                    password_field.send_keys(password)
+                    login_button = WebDriverWait(driver_task, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "//button[@type='submit' and normalize-space(text())='Log in']")))
+                    login_button.click()
+                    
+                    time.sleep(5)
+                    break
+                except Exception as e:
+                    if _ >= 2:
+                        logging.error('[ERROR] REDDIT LOGIN')
+                        logging.error(e)
+                        return False, None, None
+                    time.sleep(5)
+        case 'gitlab':
+            username = "byteblaze"
+            password = "hello1234"
+
+            for _ in range(3):
+                try:
+                    port_num = str(8023 + batch_id)
+                    gitlab = GITLAB.replace("WEBARENA_HOST", webarena_host.gitlab).replace("8023", port_num)
+                    url_mapping = [(gitlab, "http://gitlab.com")]
+                    url = url.replace(":8023", ":" + port_num)
+                    driver_task.get(f"{gitlab}/users/sign_in")
+
+                    WebDriverWait(driver_task, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='username-field']"))
+                    )
+
+                    username_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='username-field']")
+                    username_field.click()
+                    username_field.clear()
+                    username_field.send_keys(username + Keys.TAB)
+
+                    password_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='password-field']")
+                    password_field.clear()
+                    password_field.send_keys(password)
+        
+                    sign_in_button = WebDriverWait(driver_task, 10).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, "[data-testid='sign-in-button']"))
+                    )
+                    sign_in_button.click()
+
+                    time.sleep(10)
+                    break
+                except Exception as e:
+                    try:
+                        port_num = str(8023 + batch_id)
+                        gitlab = GITLAB.replace("WEBARENA_HOST", webarena_host.gitlab).replace("8023", port_num)
+                        url_mapping = [(gitlab, "http://gitlab.com")]
+                        url = url.replace(":8023", ":" + port_num)
+                        driver_task.get(f"{gitlab}/users/sign_in")
+                        WebDriverWait(driver_task, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='username-field']"))
+                        )
+                        username_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='username-field']")
+                        username_field.click()
+                        username_field.send_keys(username)
+                        username_field.send_keys(Keys.TAB)
+                        password_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='password-field']")
+                        password_field.send_keys(password)
+                        sign_in_button = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='sign-in-button']")
+                        sign_in_button.click()
+                    except Exception as e:
+                        if _ >= 2:
+                            logging.error('[ERROR] GITLAB LOGIN')
+                            logging.error(e)
+                            return False, None, None
+                        time.sleep(5)
+
+        case 'shopping_admin':
+            username = "admin"
+            password = "admin1234"
+            
+            for _ in range(3):
+                try:
+                    port_num = str(7780 + batch_id)                    
+                    shopping_admin = SHOPPING_ADMIN.replace("WEBARENA_HOST", webarena_host.shopping_admin).replace("7780", port_num)
+                    url_mapping = [("metis.lti.cs.cmu.edu", webarena_host.shopping_admin), (shopping_admin, "http://luma.com/admin")]
+                    driver_task.get(f"{shopping_admin}")
+                    WebDriverWait(driver_task, 15).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder='user name']"))
+                    )
+                    url = url.replace(":7780", ":" + port_num)
+
+                    username_field = driver_task.find_element(By.CSS_SELECTOR, "input[placeholder='user name']")
+                    username_field.send_keys(username) 
+
+                    password_field = driver_task.find_element(By.CSS_SELECTOR, "input[placeholder='password']")
+                    password_field.send_keys(password)  
+
+                    sign_in_button = WebDriverWait(driver_task, 10).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, "button.action-login.action-primary"))
+                    )
+                    sign_in_button.click()
+                    time.sleep(5)
+                    break
+                except Exception as e:
+                    if _ >= 2:
+                        logging.error('[ERROR] CMS LOGIN')
+                        logging.error(e)
+                        return False, None,None
+                    time.sleep(5)               
+
+        case 'shopping':
+            username = "emma.lopez@gmail.com"
+            password = "Password.123"
+
+            for _ in range(3):
+                try:
+                    port_num = str(7770 - batch_id)                    
+                    shopping = SHOPPING.replace("WEBARENA_HOST", webarena_host.shopping).replace("7770", port_num)
+                    url_mapping = [("metis.lti.cs.cmu.edu", webarena_host.shopping), (shopping, "http://onestopmarket.com")]
+                    url = url.replace(":7770", ":" + port_num)
+                    
+                    driver_task.get(f"{shopping}/customer/account/login/")
+                    # Wait for readiness and input fields to appear (page_load_strategy may be 'none')
+                    try:
+                        WebDriverWait(driver_task, 20).until(
+                            lambda d: d.execute_script("return document.readyState") in ("interactive", "complete")
+                        )
+                    except Exception:
+                        pass
+                    # Prefer ID locators; fall back to name-based if theme overrides IDs
+                    try:
+                        email_input = WebDriverWait(driver_task, 15).until(
+                            EC.presence_of_element_located((By.ID, "email"))
+                        )
+                    except Exception:
+                        email_input = WebDriverWait(driver_task, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='login[username]']"))
+                        )
+                    email_input.clear()
+                    email_input.send_keys(username)
+
+                    try:
+                        password_input = driver_task.find_element(By.ID, "pass")
+                    except Exception:
+                        password_input = driver_task.find_element(By.CSS_SELECTOR, "input[name='login[password]']")
+                    password_input.clear()
+                    password_input.send_keys(password)
+
+                    try:
+                        sign_in_button = WebDriverWait(driver_task, 10).until(
+                            EC.element_to_be_clickable((By.ID, "send2"))
+                        )
+                    except Exception:
+                        sign_in_button = WebDriverWait(driver_task, 10).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, "button.action.login.primary"))
+                        )
+                    sign_in_button.click()
+
+                    time.sleep(5)
+                    break
+                except Exception as e:
+                    if _ >= 2:
+                        logging.error('[ERROR] SHOPPING LOGIN')
+                        logging.error(e)
+                        return False, None, None
+                    time.sleep(5)
+        case 'map':
+            map_site = MAP.replace("WEBARENA_HOST", webarena_host.map)
+            url_mapping = [(map_site, "http://www.openstreetmap.org")]
+    return True, url_mapping, url
 
 
 class AccessibilityTreeNode(TypedDict):
