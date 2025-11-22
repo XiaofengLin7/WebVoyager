@@ -13,10 +13,12 @@ GITLAB = "http://WEBARENA_HOST:8023"
 SHOPPING_ADMIN = "http://WEBARENA_HOST:7780/admin"
 SHOPPING = "http://WEBARENA_HOST:7770"
 
-WEBARENA_DOMAINS = ['reddit', 'gitlab', 'shopping_admin', 'shopping', 'map']
+WEBARENA_DOMAINS = ['reddit', 'gitlab', 'shopping_admin', 'shopping', 'map', 'wikipedia']
 
 def webarena_login(web_name, url, driver_task, webarena_host, batch_id, num_containers_per_machine):
     batch_id = batch_id % num_containers_per_machine
+    # Initialize url_mapping to avoid UnboundLocalError if no case matches
+    url_mapping = []
     match web_name:
         case 'reddit':
             username = "MarvelsGrantMan136"
@@ -55,25 +57,29 @@ def webarena_login(web_name, url, driver_task, webarena_host, batch_id, num_cont
                     gitlab = GITLAB.replace("WEBARENA_HOST", webarena_host.gitlab).replace("8023", port_num)
                     url_mapping = [(gitlab, "http://gitlab.com")]
                     url = url.replace(":8023", ":" + port_num)
-                    driver_task.get(f"{gitlab}/users/sign_in")
-
-                    WebDriverWait(driver_task, 10).until(
+                    if url.endswith(port_num):
+                        driver_task.get(f"{gitlab}/users/sign_in")
+                        # execute sign in 
+                        WebDriverWait(driver_task, 10).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='username-field']"))
-                    )
+                        )
 
-                    username_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='username-field']")
-                    username_field.click()
-                    username_field.clear()
-                    username_field.send_keys(username + Keys.TAB)
+                        username_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='username-field']")
+                        username_field.click()
+                        username_field.clear()
+                        username_field.send_keys(username + Keys.TAB)
 
-                    password_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='password-field']")
-                    password_field.clear()
-                    password_field.send_keys(password)
-        
-                    sign_in_button = WebDriverWait(driver_task, 10).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, "[data-testid='sign-in-button']"))
-                    )
-                    sign_in_button.click()
+                        password_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='password-field']")
+                        password_field.clear()
+                        password_field.send_keys(password)
+            
+                        sign_in_button = WebDriverWait(driver_task, 10).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, "[data-testid='sign-in-button']"))
+                        )
+                        sign_in_button.click()
+
+                    else:
+                        driver_task.get(url)
 
                     time.sleep(10)
                     break
@@ -83,18 +89,29 @@ def webarena_login(web_name, url, driver_task, webarena_host, batch_id, num_cont
                         gitlab = GITLAB.replace("WEBARENA_HOST", webarena_host.gitlab).replace("8023", port_num)
                         url_mapping = [(gitlab, "http://gitlab.com")]
                         url = url.replace(":8023", ":" + port_num)
-                        driver_task.get(f"{gitlab}/users/sign_in")
-                        WebDriverWait(driver_task, 10).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='username-field']"))
-                        )
-                        username_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='username-field']")
-                        username_field.click()
-                        username_field.send_keys(username)
-                        username_field.send_keys(Keys.TAB)
-                        password_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='password-field']")
-                        password_field.send_keys(password)
-                        sign_in_button = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='sign-in-button']")
-                        sign_in_button.click()
+                        if url.endswith(port_num):
+                            driver_task.get(f"{gitlab}/users/sign_in")
+                            WebDriverWait(driver_task, 10).until(
+                                EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='username-field']"))
+                            )
+                            username_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='username-field']")
+                            username_field.click()
+                            username_field.clear()
+                            username_field.send_keys(username + Keys.TAB)
+
+                            password_field = driver_task.find_element(By.CSS_SELECTOR, "[data-testid='password-field']")
+                            password_field.clear()
+                            password_field.send_keys(password)
+                
+                            sign_in_button = WebDriverWait(driver_task, 10).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, "[data-testid='sign-in-button']"))
+                            )
+                            sign_in_button.click()
+                        else:
+                            driver_task.get(url)
+
+
+                        time.sleep(10)
                     except Exception as e:
                         if _ >= 2:
                             logging.error('[ERROR] GITLAB LOGIN')
@@ -133,7 +150,7 @@ def webarena_login(web_name, url, driver_task, webarena_host, batch_id, num_cont
                     if _ >= 2:
                         logging.error('[ERROR] CMS LOGIN')
                         logging.error(e)
-                        return False, None,None
+                        return False, None, None
                     time.sleep(5)               
 
         case 'shopping':
@@ -195,6 +212,14 @@ def webarena_login(web_name, url, driver_task, webarena_host, batch_id, num_cont
         case 'map':
             map_site = MAP.replace("WEBARENA_HOST", webarena_host.map)
             url_mapping = [(map_site, "http://www.openstreetmap.org")]
+        # TODO: add similar logic of map to wikipedia.
+        case 'wikipedia':
+            # Wikipedia doesn't require login, just return the original URL
+            url_mapping = []
+        case _:
+            # Handle any unexpected web_name values
+            logging.warning(f"Unknown web_name: {web_name}, no URL mapping applied")
+            url_mapping = []
     return True, url_mapping, url
 
 

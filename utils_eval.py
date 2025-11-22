@@ -285,17 +285,14 @@ class StringEvaluator():
 def replace_ip_and_port(target_url, url_to_modify):
     # Extract IP and port from target URL
     ip_port_pattern = r'http://([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)'
-    if "443" in target_url:
-        target_ip = "ec2-98-84-50-50.compute-1.amazonaws.com"
-        target_port = "443"
-    else:      
-        target_match = re.search(ip_port_pattern, target_url)
-            
-        if not target_match:
-            return url_to_modify
+
+    target_match = re.search(ip_port_pattern, target_url)
         
-        target_ip = target_match.group(1)
-        target_port = target_match.group(2)
+    if not target_match:
+        return url_to_modify
+    
+    target_ip = target_match.group(1)
+    target_port = target_match.group(2)
 
     url_to_modify = url_to_modify.replace("WEBARENA_HOST", target_ip).replace("PORT", target_port)
     # Replace IP and port in the second URL
@@ -504,7 +501,7 @@ def webarena_batch_eval(trajectories, batch_obs, batch_eval_info, batch_env):
             
         answer = eval_info.get('answer', 'N/A')
         eval_config["webarena_starting_url"] = obs["starting_url"]
-            
+
         driver = env.driver_task
         job_args.append((task_content, answer, eval_config, driver))
 
@@ -535,7 +532,7 @@ def webarena_eval(task_content, answer, eval_config, driver, verbose):
                     evaluators.append(HTMLContentEvaluator())
                 case _:
                     raise ValueError(f"eval_type {eval_type} is not supported")
-    
+        
         score = 1.0
         for evaluator in evaluators:
             cur_score = evaluator(task_content, answer, eval_config, driver)
