@@ -74,7 +74,7 @@ def shopping_get_latest_order_url(url) -> str:
     response = requests.get(
         f"{url}/rest/V1/orders", params=params, headers=header
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Failed to get latest order url {url}: status code {response.status_code=}"
     response_obj = response.json()["items"][0]
     order_id = int(response_obj["increment_id"])
     order_url = f"{url}/sales/order/view/order_id/{order_id}/"
@@ -283,17 +283,17 @@ class StringEvaluator():
         return score
         
 def replace_ip_and_port(target_url, url_to_modify):
-    # Extract IP and port from target URL
-    ip_port_pattern = r'http://([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)'
-
+    # Extract host (IP or hostname) and port from target URL
+    ip_port_pattern = r'http://([^/:]+):([0-9]+)'
+    # ip_port_pattern = r'http://([^/:]+):([0-9]+)'
     target_match = re.search(ip_port_pattern, target_url)
-        
+    # breakpoint()
     if not target_match:
         return url_to_modify
     
     target_ip = target_match.group(1)
     target_port = target_match.group(2)
-
+    
     url_to_modify = url_to_modify.replace("WEBARENA_HOST", target_ip).replace("PORT", target_port)
     # Replace IP and port in the second URL
     modified_url = re.sub(
@@ -542,7 +542,7 @@ def webarena_eval(task_content, answer, eval_config, driver, verbose):
     except Exception as e:
         print("[EVAL ERROR]", e)
         print(traceback.format_exc())
-        score = -1
+        score = 0
         if verbose:
             logging.info(f"[WEBARENA EVAL FAIL] Task: {task_content} Answer: {answer} Config: {eval_config} Result: {score}")
     return score
